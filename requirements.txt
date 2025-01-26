@@ -2,6 +2,7 @@ https://codeload.github.com/KurimuzonAkuma/pyrogram/zip/refs/heads/dev
 pyrofork
 TgCrypto
 pyromod
+Flask==2.0.1
 humanize
 schedule
 APscheduler
