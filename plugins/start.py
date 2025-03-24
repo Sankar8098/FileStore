@@ -66,7 +66,10 @@ async def start_command(client: Client, message: Message):
                     [InlineKeyboardButton('• ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋ •', url=TUT_VID)]
                 ]
                 return await message.reply(
-                    f"<b>Your token has expired. Please refresh your token to continue.\n\nToken Timeout: {get_exp_time(VERIFY_EXPIRE)}\n\nWhat is the token?\n\nThis is an ads token. Passing one ad allows you to use the bot for {get_exp_time(VERIFY_EXPIRE)}</b>",
+                    f"<b>Your token has expired. Please refresh your token to continue.\n\nToken Timeout: {get_exp_time(VERIFY_EXPIRE)}\n\nWhat is the token?\n\n"This is an ads token. If you pass 1 ad, you can use the bot for 23 hours after passing the ad.\n\n"
+    "ஒரு முறை விளம்பர சரிபார்ப்பு, பின்னர் நீங்கள் அமைக்கப்பட்டுள்ளீர்கள்! அடுத்த முறை, இணைப்பைக் கிளிக் செய்து, "
+    "விளம்பரங்கள் இல்லாமல் 24 மணிநேரம் வீடியோக்களை (Video's) பார்த்து மகிழுங்கள்.",
+  {get_exp_time(VERIFY_EXPIRE)}</b>",
                     reply_markup=InlineKeyboardMarkup(btn),
                     protect_content=False,
                     quote=True
