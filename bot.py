@@ -1,21 +1,20 @@
 import asyncio
+import sys
+import logging
+from datetime import datetime
 from aiohttp import web
-import pyromod.listen
 from pyrogram import Client
 from pyrogram.enums import ParseMode
-import sys
-from datetime import datetime
-from config import *
+import pyromod.listen
+from config import API_HASH, APP_ID, TG_BOT_TOKEN, TG_BOT_WORKERS, FORCE_SUB_CHANNEL1, FORCE_SUB_CHANNEL2, FORCE_SUB_CHANNEL3, FORCE_SUB_CHANNEL4, CHANNEL_ID, OWNER_ID, PORT
 from plugins import web_server
 
-# Bot Name Banner
-BOT_BANNER = """
-  ___ ___  ___  ___ ___ _    _____  _____  ___ _____ ___ 
- / __/ _ \\|   \\| __| __| |  |_ _\\ \\/ / _ )/ _ \\_   _/ __|
-| (_| (_) | |) | _|| _|| |__ | | >  <| _ \\ (_) || | \\__ \\
- \\___\\___/|___/|___|_| |____|___/_/\\_\\___/\\___/ |_| |___/
-                                                         
-"""                                                                                     
+# Configure Logger
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+LOGGER = logging.getLogger(__name__)
 
 class Bot(Client):
     def __init__(self):
@@ -29,40 +28,22 @@ class Bot(Client):
         )
         self.LOGGER = LOGGER
         self.uptime = None
-        self.invitelinks = {}
 
     async def start(self):
         await super().start()
         self.uptime = datetime.now()
-        usr_bot_me = await self.get_me()
-        self.username = usr_bot_me.username
+        self.username = (await self.get_me()).username
 
-        # Force Subscribe Check
-        for i, channel in enumerate([FORCE_SUB_CHANNEL1, FORCE_SUB_CHANNEL2, FORCE_SUB_CHANNEL3, FORCE_SUB_CHANNEL4], start=1):
-            if channel:
-                try:
-                    chat = await self.get_chat(channel)
-                    link = chat.invite_link or (await self.export_chat_invite_link(channel))
-                    self.invitelinks[f"channel{i}"] = link
-                except Exception as e:
-                    self.LOGGER.warning(f"⚠️ Error in FORCE_SUB_CHANNEL{i}: {e}")
-                    self.LOGGER.warning(f"Check if bot is an admin in {channel} with 'Invite via Link' permission!")
-                    sys.exit()
+        self.LOGGER.info("✅ Bot Started! Made by @Codeflix_Bots")
 
-        # Database Channel Check
-        try:
-            db_channel = await self.get_chat(CHANNEL_ID)
-            self.db_channel = db_channel
-            test_msg = await self.send_message(chat_id=db_channel.id, text="Test Message")
-            await test_msg.delete()
-        except Exception as e:
-            self.LOGGER.warning(f"⚠️ Database Channel Error: {e}")
-            self.LOGGER.warning(f"Check if bot is an admin in CHANNEL_ID {CHANNEL_ID}!")
-            sys.exit()
+        # Check force subscription channels
+        await self.check_force_sub_channel(FORCE_SUB_CHANNEL1, "FORCE_SUB_CHANNEL1")
+        await self.check_force_sub_channel(FORCE_SUB_CHANNEL2, "FORCE_SUB_CHANNEL2")
+        await self.check_force_sub_channel(FORCE_SUB_CHANNEL3, "FORCE_SUB_CHANNEL3")
+        await self.check_force_sub_channel(FORCE_SUB_CHANNEL4, "FORCE_SUB_CHANNEL4")
 
-        self.set_parse_mode(ParseMode.HTML)
-        self.LOGGER.info(f"✅ Bot Started! Made by @Codeflix_Bots")
-        self.LOGGER.info(BOT_BANNER)
+        # Check DB Channel
+        await self.check_db_channel()
 
         # Start Web Server
         app = web.AppRunner(await web_server())
@@ -71,22 +52,47 @@ class Bot(Client):
 
         # Notify Owner
         try:
-            await self.send_message(OWNER_ID, text="<b>🤖 Bot Restarted by @Codeflix_Bots</b>")
+            await self.send_message(OWNER_ID, text=f"<b>🤖 Bot Restarted by @Codeflix_Bots</b>")
         except Exception as e:
-            self.LOGGER.warning(f"⚠️ Unable to send restart message to OWNER_ID: {e}")
+            self.LOGGER.warning(f"Failed to send start notification: {e}")
+
+    async def check_force_sub_channel(self, channel_id, var_name):
+        if not channel_id:
+            return
+        try:
+            chat = await self.get_chat(channel_id)
+            link = chat.invite_link or await self.export_chat_invite_link(channel_id)
+            setattr(self, f"invitelink_{var_name.lower()[-1]}", link)
+        except Exception as e:
+            self.LOGGER.warning(f"❌ Cannot get invite link for {var_name}: {e}")
+            self.LOGGER.warning(f"Make sure the bot is an admin with 'Invite Users via Link' permission in {var_name} ({channel_id}).")
+            sys.exit()
+
+    async def check_db_channel(self):
+        try:
+            self.db_channel = await self.get_chat(CHANNEL_ID)
+            test_msg = await self.send_message(self.db_channel.id, "Test Message")
+            await test_msg.delete()
+        except Exception as e:
+            self.LOGGER.warning(f"❌ DB Channel Error: {e}")
+            self.LOGGER.warning(f"Make sure the bot is an admin in the DB Channel ({CHANNEL_ID}).")
+            sys.exit()
 
     async def stop(self, *args):
         await super().stop()
         self.LOGGER.info("❌ Bot Stopped.")
 
     def run(self):
-        """Start the bot event loop."""
         loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.start())
         try:
-            loop.run_until_complete(self.start())
             loop.run_forever()
         except KeyboardInterrupt:
-            self.LOGGER.info("⚠️ Shutting Down Bot...")
+            self.LOGGER.info("🔴 Shutting down...")
         finally:
             loop.run_until_complete(self.stop())
-         
+
+# Start the bot
+if __name__ == "__main__":
+    Bot().run()
+                                
